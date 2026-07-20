@@ -16,9 +16,8 @@ export default async function DashboardPage() {
   ]);
 
   const runningProjects = projectFinancials.filter(
-    (p) => p.project.status === "berjalan"
-  );
-
+  (p: any) => p.project?.status === "berjalan"
+);
   return (
     <div className="space-y-6">
       <div>
