@@ -29,10 +29,12 @@ export async function createProject(formData: FormData) {
     id: nanoid(),
     userId,
     name,
+    description: description || null,
     status,
   });
 
   revalidatePath("/proyek");
+  revalidatePath("/kanban");
   revalidatePath("/dashboard");
   redirect("/proyek");
 }
@@ -44,6 +46,94 @@ export async function getProjects() {
     .from(projects)
     .where(eq(projects.userId, userId))
     .orderBy(desc(projects.createdAt));
+}
+
+export async function getProjectById(id: string) {
+  const userId = await requireUserId();
+  const result = await db
+    .select()
+    .from(projects)
+    .where(and(eq(projects.id, id), eq(projects.userId, userId)));
+  return result[0] || null;
+}
+
+export async function getKanbanProjects() {
+  const userId = await requireUserId();
+  return await db
+    .select()
+    .from(projects)
+    .where(eq(projects.userId, userId))
+    .orderBy(desc(projects.createdAt));
+}
+
+export async function updateProjectStage(id: string, stage: string) {
+  const userId = await requireUserId();
+  await db
+    .update(projects)
+    .set({ stage })
+    .where(and(eq(projects.id, id), eq(projects.userId, userId)));
+
+  revalidatePath("/kanban");
+  revalidatePath(`/proyek/${id}`);
+}
+
+export async function updateProjectStatus(id: string, status: string) {
+  const userId = await requireUserId();
+  await db
+    .update(projects)
+    .set({ status })
+    .where(and(eq(projects.id, id), eq(projects.userId, userId)));
+
+  revalidatePath("/proyek");
+  revalidatePath("/kanban");
+  revalidatePath(`/proyek/${id}`);
+}
+
+export async function getProjectFinancials(projectId: string) {
+  const userId = await requireUserId();
+
+  const project = await getProjectById(projectId);
+  if (!project) return null;
+
+  const invoiceRows = await db
+    .select({
+      total: sql<number>`sum(${invoices.amount})`,
+    })
+    .from(invoices)
+    .where(
+      and(eq(invoices.projectId, projectId), eq(invoices.userId, userId))
+    );
+
+  const txRows = await db
+    .select({
+      type: transactions.type,
+      total: sql<number>`sum(${transactions.amount})`,
+    })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.projectId, projectId),
+        eq(transactions.userId, userId)
+      )
+    )
+    .groupBy(transactions.type);
+
+  const totalInvoice = Number(invoiceRows[0]?.total) || 0;
+
+  let totalMasuk = 0;
+  let totalKeluar = 0;
+  for (const t of txRows) {
+    if (t.type === "masuk") totalMasuk = Number(t.total) || 0;
+    if (t.type === "keluar") totalKeluar = Number(t.total) || 0;
+  }
+
+  return {
+    project,
+    totalInvoice,
+    totalMasuk,
+    totalKeluar,
+    profit: totalMasuk - totalKeluar,
+  };
 }
 
 export async function getAllProjectsFinancials() {
@@ -60,7 +150,6 @@ export async function getAllProjectsFinancials() {
 
   const result = await Promise.all(
     userProjects.map(async (project) => {
-      // Hitung total invoice proyek
       const invoiceRows = await db
         .select({
           total: sql<number>`sum(${invoices.amount})`,
@@ -70,7 +159,6 @@ export async function getAllProjectsFinancials() {
           and(eq(invoices.projectId, project.id), eq(invoices.userId, userId))
         );
 
-      // Hitung transaksi pengeluaran/pemasukan proyek
       const txRows = await db
         .select({
           type: transactions.type,
