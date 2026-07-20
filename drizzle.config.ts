@@ -5,12 +5,10 @@ const url =
   process.env.TURSO_DATABASE_URL ||
   `file:${process.env.DATABASE_PATH || "./sqlite.db"}`;
 
-export default {
-  schema: "./lib/db/schema.ts",
-  out: "./drizzle",
-  dialect: "turso",
+// Ensure dialect is 'postgresql', not 'sqlite' or 'turso'
+export default defineConfig({
+  dialect: "postgresql",
   dbCredentials: {
-    url,
-    authToken: process.env.TURSO_AUTH_TOKEN,
+    url: process.env.DATABASE_URL!,
   },
-} satisfies Config;
+});
