@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { transactions, projects } from "@/lib/db/schema";
 import { getServerSession } from "@/lib/get-session";
 import { nanoid } from "nanoid";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, gte } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -105,8 +105,8 @@ export async function getCashFlowSummary() {
   let totalMasuk = 0;
   let totalKeluar = 0;
   for (const r of rows) {
-    if (r.type === "masuk") totalMasuk = r.total || 0;
-    if (r.type === "keluar") totalKeluar = r.total || 0;
+    if (r.type === "masuk") totalMasuk = Number(r.total) || 0;
+    if (r.type === "keluar") totalKeluar = Number(r.total) || 0;
   }
 
   return {
@@ -131,7 +131,7 @@ export async function getMonthlyCashFlow() {
     .where(
       and(
         eq(transactions.userId, userId),
-        sql`${transactions.date} >= ${startOfMonth}`
+        gte(transactions.date, startOfMonth)
       )
     )
     .groupBy(transactions.type);
@@ -139,8 +139,8 @@ export async function getMonthlyCashFlow() {
   let totalMasuk = 0;
   let totalKeluar = 0;
   for (const r of rows) {
-    if (r.type === "masuk") totalMasuk = r.total || 0;
-    if (r.type === "keluar") totalKeluar = r.total || 0;
+    if (r.type === "masuk") totalMasuk = Number(r.total) || 0;
+    if (r.type === "keluar") totalKeluar = Number(r.total) || 0;
   }
 
   return { totalMasuk, totalKeluar, profit: totalMasuk - totalKeluar };

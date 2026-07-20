@@ -14,9 +14,12 @@ export default async function DashboardPage() {
     getMonthlyCashFlow(),
     getAllProjectsFinancials(),
   ]);
+// Pastikan query memberikan array default jika data kosong/null
+const projectFinancials = await getProjectFinancials() || [];
 
-  const runningProjects = projectFinancials.filter(
-  (p: any) => p.project?.status === "berjalan"
+// Gunakan optional chaining `?.` saat filter/map
+const runningProjects = projectFinancials.filter(
+  (p: any) => p?.project?.status === "berjalan"
 );
   return (
     <div className="space-y-6">
