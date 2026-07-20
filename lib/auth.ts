@@ -1,24 +1,16 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { db } from "./db";
-import * as schema from "./db/schema";
+import { db } from "@/lib/db"; // sesuaikan path db Anda
+import * as schema from "@/lib/db/schema"; // sesuaikan path schema Anda
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
-    provider: "sqlite",
+    provider: "pg", // HARUS "pg" (PostgreSQL), bukan "sqlite"
     schema: {
-      user: schema.user,
-      session: schema.session,
-      account: schema.account,
-      verification: schema.verification,
+      ...schema,
     },
   }),
   emailAndPassword: {
     enabled: true,
-    // Untuk usaha pribadi, verifikasi email tidak wajib. Bisa diaktifkan nanti.
-    requireEmailVerification: false,
-  },
-  session: {
-    expiresIn: 60 * 60 * 24 * 30, // 30 hari
   },
 });
